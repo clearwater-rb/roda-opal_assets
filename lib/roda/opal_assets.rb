@@ -19,7 +19,7 @@ class Roda
       ::Opal::Sprockets.javascript_include_tag(
         file,
         sprockets: sprockets,
-        prefix: '/assets/js/',
+        prefix: '/assets/js',
         debug: ENV['RACK_ENV'] != 'production',
       )
     end
