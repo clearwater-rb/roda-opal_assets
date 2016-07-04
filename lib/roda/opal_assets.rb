@@ -65,7 +65,7 @@ class Roda
 
       source_maps = Opal::SourceMapServer.new(sprockets, source_map_prefix)
       unless production?
-        ::Opal::Sprockets::SourceMapHeaderPatch.inject!(p source_map_prefix)
+        ::Opal::Sprockets::SourceMapHeaderPatch.inject!(source_map_prefix)
       end
 
       @source_maps = Rack::Builder.new do
