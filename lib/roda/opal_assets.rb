@@ -1,8 +1,17 @@
 require "roda/opal_assets/version"
 require "roda"
+require "opal"
 
 class Roda
   class OpalAssets
+    def initialize env: ENV['RACK_ENV']
+      @env = env
+
+      Opal::Config.source_map_enabled = !production?
+      sprockets
+      source_maps
+    end
+
     def route r
       r.on source_map_prefix[1..-1] do
         r.run source_maps
@@ -20,7 +29,7 @@ class Roda
         file,
         sprockets: sprockets,
         prefix: '/assets/js',
-        debug: ENV['RACK_ENV'] != 'production',
+        debug: !production?,
       )
     end
 
@@ -55,7 +64,9 @@ class Roda
       return @source_maps if defined? @source_maps
 
       source_maps = Opal::SourceMapServer.new(sprockets, source_map_prefix)
-      ::Opal::Sprockets::SourceMapHeaderPatch.inject!(source_map_prefix)
+      unless production?
+        ::Opal::Sprockets::SourceMapHeaderPatch.inject!(p source_map_prefix)
+      end
 
       @source_maps = Rack::Builder.new do
         use Rack::ConditionalGet
@@ -63,6 +74,10 @@ class Roda
 
         run source_maps
       end
+    end
+
+    def production?
+      @env == 'production'
     end
   end
 end
