@@ -10,7 +10,7 @@ class Roda
 
       Opal::Config.source_map_enabled = !production?
       sprockets
-      source_maps
+      source_maps unless production?
     end
 
     def route r
