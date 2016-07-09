@@ -1,6 +1,7 @@
 require "roda/opal_assets/version"
 require "roda"
 require "opal"
+require "uglifier" if ENV['RACK_ENV'] == 'production'
 
 class Roda
   class OpalAssets
@@ -52,6 +53,8 @@ class Roda
       end
       sprockets.append_path 'assets/js'
       sprockets.append_path 'assets/css'
+
+      sprockets.js_compressor = :uglifier if production?
 
       @sprockets = sprockets
     end
