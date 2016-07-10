@@ -26,12 +26,18 @@ class Roda
     end
 
     def js file
-      ::Opal::Sprockets.javascript_include_tag(
-        file,
-        sprockets: sprockets,
-        prefix: '/assets/js',
-        debug: !production?,
-      )
+      scripts = ''
+      asset = sprockets[file]
+
+      if production?
+        scripts << %{<script src="/assets/js/#{asset.digest_path}"></script>\n}
+      else
+        asset.to_a.each { |dependency|
+          scripts << %{<script src="/assets/js/#{dependency.digest_path}?body=1"></script>\n}
+        }
+      end
+
+      scripts << %{<script>#{Opal::Sprockets.load_asset(file, sprockets)}</script>}
     end
 
     def stylesheet file, media: :all
