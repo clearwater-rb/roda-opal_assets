@@ -39,7 +39,17 @@ end
 
 Then you can put your Ruby and JS assets in `assets/js` and your stylesheets in `assets/css`.
 
-Inside your views, you just need to call the `js` and `stylesheet` methods above.
+Inside your views, you just need to call the `js` and `stylesheet` methods above. Here is an example 'layout.slim' template:
+
+```slim
+doctype 5
+html
+  head
+    title My App
+    == js 'app'
+
+  body= yield
+```
 
 ## Contributing
 
