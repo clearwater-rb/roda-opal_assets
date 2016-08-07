@@ -1,3 +1,4 @@
+require "yaml"
 require "roda/opal_assets/version"
 require "roda"
 require "opal"
