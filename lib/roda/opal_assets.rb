@@ -51,13 +51,19 @@ class Roda
 
     def stylesheet file, media: :all
       file << '.css' unless file.end_with? '.css'
-      asset = sprockets[file]
 
-      if asset.nil?
-        raise "File not found: #{file}.css"
-      end
+      path = if production?
+               "/assets/#{manifest[file]}"
+             else
+               asset = sprockets[file]
 
-      path = asset.filename.to_s.sub(Dir.pwd, '')
+               if asset.nil?
+                 raise "File not found: #{file}.css"
+               end
+
+               asset.filename.to_s.sub(Dir.pwd, '')
+             end
+
       %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
     end
 
