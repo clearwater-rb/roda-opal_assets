@@ -11,9 +11,9 @@ class Roda
       @assets = []
       @file_cache = {}
 
-      Opal::Config.source_map_enabled = !production?
       sprockets
-      source_maps unless production?
+
+      source_maps
     end
 
     def route r
@@ -43,7 +43,7 @@ class Roda
           scripts << %{<script src="/assets/js/#{dependency.digest_path}?body=1"></script>\n}
         }
 
-        scripts << %{<script>#{Opal::Sprockets.load_asset(file, sprockets)}</script>}
+        scripts << %{<script>#{opal_boot_code file}</script>}
       end
 
       scripts
@@ -80,7 +80,7 @@ class Roda
     end
 
     def compile_file file, output_filename
-      compiled = sprockets[file].to_s + Opal::Sprockets.load_asset(file, sprockets)
+      compiled = sprockets[file].to_s + opal_boot_code(file)
 
       File.write output_filename, compiled
       nil
@@ -112,8 +112,16 @@ class Roda
     def source_maps
       return @source_maps if defined? @source_maps
 
+      source_map_handler = if supports_opal_config?
+                             Opal::Config
+                           else
+                             Opal::Processor
+                           end
+
+      source_map_handler.source_map_enabled = !production? && min_opal_version?('0.8.0')
+
       source_maps = Opal::SourceMapServer.new(sprockets, source_map_prefix)
-      unless production?
+      if !production? && min_opal_version?('0.8.0')
         ::Opal::Sprockets::SourceMapHeaderPatch.inject!(source_map_prefix)
       end
 
@@ -138,6 +146,26 @@ class Roda
 
     def production?
       @env == :production
+    end
+
+    def opal_boot_code file
+      if min_opal_version? '0.9.0'
+        Opal::Sprockets.load_asset(file, sprockets)
+      elsif min_opal_version? '0.8.0'
+        Opal::Processor.load_asset_code(sprockets, file)
+      else
+        ''
+      end
+    end
+
+    def supports_opal_config?
+      min_opal_version? '0.8.0'
+    end
+
+    # Check for minimum Opal version, but do it in a weird way because Array
+    # implements <=> but doesn't include Comparable
+    def min_opal_version? version
+      (Opal::VERSION.split('.').map(&:to_i) <=> version.split('.').map(&:to_i)) >= 0
     end
   end
 end
