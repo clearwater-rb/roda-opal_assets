@@ -5,8 +5,10 @@ require "uglifier" if ENV['RACK_ENV'] == 'production'
 
 class Roda
   class OpalAssets
-    def initialize env: ENV['RACK_ENV']
-      @env = env
+    def initialize env: ENV.fetch('RACK_ENV') { 'development' }
+      @env = env.to_sym
+      @assets = []
+      @file_cache = {}
 
       Opal::Config.source_map_enabled = !production?
       sprockets
@@ -14,40 +16,77 @@ class Roda
     end
 
     def route r
-      r.on source_map_prefix[1..-1] do
-        r.run source_maps
-      end
-      r.on 'assets/js' do
-        r.run sprockets
-      end
-      r.on 'assets/css' do
-        r.run sprockets
+      unless production?
+        r.on source_map_prefix[1..-1] do
+          r.run source_maps
+        end
+        r.on 'assets/js' do
+          r.run sprockets
+        end
+        r.on 'assets/css' do
+          r.run sprockets
+        end
       end
     end
 
     def js file
+      file << '.js' unless file.end_with? '.js'
       scripts = ''
-      asset = sprockets[file]
 
       if production?
-        scripts << %{<script src="/assets/js/#{asset.digest_path}"></script>\n}
+        scripts << %{<script src="/assets/#{manifest[file]}"></script>\n}
       else
+        asset = sprockets[file]
+
         asset.to_a.each { |dependency|
           scripts << %{<script src="/assets/js/#{dependency.digest_path}?body=1"></script>\n}
         }
+
+        scripts << %{<script>#{Opal::Sprockets.load_asset(file, sprockets)}</script>}
       end
 
-      scripts << %{<script>#{Opal::Sprockets.load_asset(file, sprockets)}</script>}
+      scripts
     end
 
     def stylesheet file, media: :all
-      asset = sprockets["#{file}.css"]
+      file << '.css' unless file.end_with? '.css'
+      asset = sprockets[file]
+
       if asset.nil?
         raise "File not found: #{file}.css"
       end
 
       path = asset.filename.to_s.sub(Dir.pwd, '')
       %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
+    end
+
+    def << asset
+      @assets << asset
+    end
+
+    def build
+      FileUtils.mkdir_p 'public/assets'
+
+      @manifest = @assets.each_with_object({}) do |file, hash|
+        print "Compiling #{file}..."
+        asset = sprockets[file]
+        hash[file] = asset.digest_path
+        compile_file file, "public/assets/#{asset.digest_path}"
+        puts ' done'
+      end
+
+      File.write 'assets.yml', YAML.dump(manifest)
+    end
+
+    def compile_file file, output_filename
+      compiled = sprockets[file].to_s + Opal::Sprockets.load_asset(file, sprockets)
+
+      File.write output_filename, compiled
+      nil
+    end
+
+    def compile file
+      sprockets[file].to_s
     end
 
     def sprockets
@@ -85,8 +124,19 @@ class Roda
       end
     end
 
+    def manifest
+      return @manifest if defined? @manifest
+
+      @manifest = YAML.load_file 'assets.yml'
+      unless @manifest
+        warn 'Assets manifest is broken'
+      end
+
+      @manifest
+    end
+
     def production?
-      @env == 'production'
+      @env == :production
     end
   end
 end
