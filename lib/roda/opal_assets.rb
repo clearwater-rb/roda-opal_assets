@@ -6,13 +6,13 @@ require "uglifier" if ENV['RACK_ENV'] == 'production'
 
 class Roda
   class OpalAssets
-    def initialize env: ENV.fetch('RACK_ENV') { 'development' }
-      @env = env.to_sym
+    def initialize options={}
+      @env = options.fetch(:env) { ENV.fetch('RACK_ENV') { 'development' } }.to_sym
+      @minify = options.fetch(:minify) { production? }
       @assets = []
       @file_cache = {}
 
       sprockets
-
       source_maps
     end
 
@@ -106,7 +106,7 @@ class Roda
       sprockets.append_path 'assets/js'
       sprockets.append_path 'assets/css'
 
-      sprockets.js_compressor = :uglifier if production?
+      sprockets.js_compressor = :uglifier if @minify
 
       @sprockets = sprockets
     end
