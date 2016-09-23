@@ -4,7 +4,6 @@ require "roda"
 require "sprockets"
 require "opal"
 require "opal/sprockets"
-require "closure-compiler" if ENV['RACK_ENV'] == 'production'
 
 class Roda
   class OpalAssets
@@ -16,6 +15,12 @@ class Roda
 
       sprockets
       source_maps
+
+      if @minify
+        require "closure-compiler"
+      end
+
+      @special_mappings = []
     end
 
     def route r
@@ -35,7 +40,20 @@ class Roda
         r.on 'assets' do
           r.run sprockets
         end
+        @special_mappings.each do |mapping|
+          r.on mapping.path do
+            r.run mapping
+          end
+        end
       end
+    end
+
+    def serve(asset_name, as:)
+      @special_mappings << Mapping.new(
+        path: as.sub(/\/+/, ''),
+        asset: asset_name,
+        compiler: self,
+      )
     end
 
     def script file
@@ -107,7 +125,7 @@ class Roda
     end
 
     def compile_file file, output_filename
-      compiled = sprockets[file].to_s + opal_boot_code(file)
+      compiled = compile(file) + opal_boot_code(file)
 
       File.write output_filename, compiled
       nil
@@ -127,6 +145,7 @@ class Roda
       sprockets.append_path 'assets/js'
       sprockets.append_path 'assets/css'
       sprockets.append_path 'assets/images'
+      sprockets.append_path 'assets/service_workers'
 
       sprockets.js_compressor = :closure if @minify
 
@@ -148,7 +167,10 @@ class Roda
 
       source_map_handler.source_map_enabled = !production? && min_opal_version?('0.8.0')
 
-      source_maps = Opal::SourceMapServer.new(sprockets, source_map_prefix)
+      if defined? Opal::SourceMapServer
+        source_maps = Opal::SourceMapServer.new(sprockets, source_map_prefix)
+      end
+
       if !production? && min_opal_version?('0.8.0')
         ::Opal::Sprockets::SourceMapHeaderPatch.inject!(source_map_prefix)
       end
@@ -194,6 +216,22 @@ class Roda
     # implements <=> but doesn't include Comparable
     def min_opal_version? version
       (Opal::VERSION.split('.').map(&:to_i) <=> version.split('.').map(&:to_i)) >= 0
+    end
+
+    class Mapping
+      attr_reader :asset, :path, :compiler
+
+      def initialize(asset:, path:, compiler:)
+        @asset = asset
+        @path = path
+        @compiler = compiler
+      end
+
+      def call(env)
+        body = compiler.compile(asset) + compiler.opal_boot_code(asset)
+
+        [200, { 'Content-Type' => 'text/javascript' }, [body]]
+      end
     end
   end
 end
