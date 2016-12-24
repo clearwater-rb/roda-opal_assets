@@ -1,7 +1,9 @@
 require "yaml"
 require "roda/opal_assets/version"
 require "roda"
+require "sprockets"
 require "opal"
+require "opal/sprockets"
 require "uglifier" if ENV['RACK_ENV'] == 'production'
 
 class Roda
