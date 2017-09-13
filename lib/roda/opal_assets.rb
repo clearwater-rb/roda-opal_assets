@@ -4,7 +4,7 @@ require "roda"
 require "sprockets"
 require "opal"
 require "opal/sprockets"
-require "uglifier" if ENV['RACK_ENV'] == 'production'
+require "closure-compiler" if ENV['RACK_ENV'] == 'production'
 
 class Roda
   class OpalAssets
@@ -29,10 +29,16 @@ class Roda
         r.on 'assets/css' do
           r.run sprockets
         end
+        r.on 'assets/images' do
+          r.run sprockets
+        end
+        r.on 'assets' do
+          r.run sprockets
+        end
       end
     end
 
-    def js file
+    def script file
       file << '.js' unless file.end_with? '.js'
       scripts = ''
 
@@ -42,7 +48,7 @@ class Roda
         asset = sprockets[file]
 
         asset.to_a.each { |dependency|
-          scripts << %{<script src="/assets/js/#{dependency.digest_path}?body=1"></script>\n}
+          scripts << %{<script src="/assets/#{dependency.digest_path}?body=1"></script>\n}
         }
 
         scripts << %{<script>#{opal_boot_code file}</script>}
@@ -50,27 +56,40 @@ class Roda
 
       scripts
     end
+    alias js script
 
     def stylesheet file, media: :all
       file << '.css' unless file.end_with? '.css'
 
-      path = if production?
-               "/assets/#{manifest[file]}"
-             else
-               asset = sprockets[file]
+      %{<link href="#{asset_path(file)}" media="#{media}" rel="stylesheet" />}
+    end
+    alias css stylesheet
 
-               if asset.nil?
-                 raise "File not found: #{file}.css"
-               end
+    def image file, options={}
+      options = options.merge(src: asset_path(file))
 
-               asset.filename.to_s.sub(Dir.pwd, '')
-             end
+      %{<img#{options.reduce('') { |string, (key, value)| string << " #{key}=#{value.inspect}" }} />}
+    end
 
-      %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
+    def asset_path file
+      if production?
+        "/assets/#{manifest[file]}"
+      else
+        asset = sprockets[file]
+        raise ArgumentError, "Asset not found: #{file}" if asset.nil?
+
+        asset.filename.to_s.sub(Dir.pwd, '')
+      end
     end
 
     def << asset
-      @assets << asset
+      if asset.is_a? Dir
+        asset.each do |filename|
+          self << File.basename(filename) unless filename.start_with? '.'
+        end
+      else
+        @assets << asset
+      end
     end
 
     def build
@@ -107,8 +126,9 @@ class Roda
       end
       sprockets.append_path 'assets/js'
       sprockets.append_path 'assets/css'
+      sprockets.append_path 'assets/images'
 
-      sprockets.js_compressor = :uglifier if @minify
+      sprockets.js_compressor = :closure if @minify
 
       @sprockets = sprockets
     end
