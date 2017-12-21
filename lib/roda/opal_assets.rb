@@ -40,10 +40,11 @@ class Roda
         r.on 'assets' do
           r.run sprockets
         end
-        @special_mappings.each do |mapping|
-          r.on mapping.path do
-            r.run mapping
-          end
+      end
+
+      @special_mappings.each do |mapping|
+        r.on mapping.path do
+          r.run mapping
         end
       end
     end
@@ -61,7 +62,13 @@ class Roda
       scripts = ''
 
       if production?
-        scripts << %{<script src="/assets/#{manifest[file]}"></script>\n}
+        path = if @special_mappings.any? { |m| m.asset == file }
+                 '' # No path prefix for special mappings
+               else
+                 '/assets/'
+               end
+        path << manifest[file]
+        scripts << %{<script src="#{path}"></script>\n}
       else
         asset = sprockets[file]
 
@@ -116,8 +123,10 @@ class Roda
       @manifest = @assets.each_with_object({}) do |file, hash|
         print "Compiling #{file}..."
         asset = sprockets[file]
-        hash[file] = asset.digest_path
-        compile_file file, "public/assets/#{asset.digest_path}"
+        hash[file] = @special_mappings.find(proc { asset.digest_path }) { |mapping|
+          break mapping.path if mapping.asset == file
+        }
+        compile_file file, "public/assets/#{hash[file]}"
         puts ' done'
       end
 

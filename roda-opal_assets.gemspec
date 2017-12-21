@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency "opal", "~> 0.7", "< 0.12.0"
-  spec.add_runtime_dependency "sprockets", "~> 3.6.0"
+  spec.add_runtime_dependency "sprockets", "~> 3.6"
   spec.add_runtime_dependency "roda"
   spec.add_runtime_dependency "closure-compiler"
   spec.add_runtime_dependency "rack", "~> 1.0"
