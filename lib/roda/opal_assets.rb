@@ -29,6 +29,12 @@ class Roda
         r.on 'assets/css' do
           r.run sprockets
         end
+        r.on 'assets/images' do
+          r.run sprockets
+        end
+        r.on 'assets' do
+          r.run sprockets
+        end
       end
     end
 
@@ -69,6 +75,26 @@ class Roda
       %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
     end
 
+    def image file, **attrs
+      path = if production?
+               "/assets/#{manifest[file]}"
+             else
+               asset = sprockets[file]
+
+               if asset.nil?
+                 raise "File not found: #{file}"
+               end
+
+               "/assets/images/#{asset.digest_path}"
+             end
+
+      attrs = attrs.each_with_object('') do |(key, value), string|
+        string << " #{key}=#{value}"
+      end
+
+      %{<image src="#{path}"#{attrs}/>}
+    end
+
     def << asset
       @assets << asset
     end
@@ -107,6 +133,8 @@ class Roda
       end
       sprockets.append_path 'assets/js'
       sprockets.append_path 'assets/css'
+      sprockets.append_path 'assets/images'
+      sprockets.append_path 'assets'
 
       sprockets.js_compressor = :uglifier if @minify
 
