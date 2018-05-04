@@ -51,7 +51,7 @@ class Roda
 
     def serve(asset_name, as:)
       @special_mappings << Mapping.new(
-        path: as.sub(/\/+/, ''),
+        path: as.sub(/\A\/+/, ''),
         asset: asset_name,
         compiler: self,
       )
