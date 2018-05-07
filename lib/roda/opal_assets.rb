@@ -92,7 +92,7 @@ class Roda
         string << " #{key}=#{value}"
       end
 
-      %{<image src="#{path}"#{attrs}/>}
+      %{<img src="#{path}"#{attrs}/>}
     end
 
     def << asset
