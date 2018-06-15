@@ -74,6 +74,7 @@ class Roda
 
       %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
     end
+    alias css stylesheet
 
     def image file, **attrs
       path = if production?
