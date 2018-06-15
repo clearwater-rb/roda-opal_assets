@@ -106,7 +106,9 @@ class Roda
         print "Compiling #{file}..."
         asset = sprockets[file]
         hash[file] = asset.digest_path
-        compile_file file, "public/assets/#{asset.digest_path}"
+        filename = "public/assets/#{asset.digest_path}"
+        FileUtils.mkdir_p File.dirname(filename)
+        compile_file file, filename
         puts ' done'
       end
 
