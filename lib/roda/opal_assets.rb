@@ -66,7 +66,7 @@ class Roda
                asset = sprockets[file]
 
                if asset.nil?
-                 raise "File not found: #{file}.css"
+                 raise "File not found: #{file}"
                end
 
                asset.filename.to_s.sub(Dir.pwd, '')
