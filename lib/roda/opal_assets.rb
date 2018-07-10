@@ -69,7 +69,7 @@ class Roda
                  raise "File not found: #{file}"
                end
 
-               asset.filename.to_s.sub(Dir.pwd, '')
+               "/assets/css/#{asset.digest_path}?body=1"
              end
 
       %{<link href="#{path}" media="#{media}" rel="stylesheet" />}
