@@ -38,17 +38,17 @@ class Roda
       end
     end
 
-    def js file
+    def js file, prefix=nil
       file << '.js' unless file.end_with? '.js'
       scripts = ''
 
       if production?
-        scripts << %{<script src="/assets/#{manifest[file]}"></script>\n}
+        scripts << %{<script src="#{prefix}/assets/#{manifest[file]}"></script>\n}
       else
         asset = sprockets[file]
 
         asset.to_a.each { |dependency|
-          scripts << %{<script src="/assets/js/#{dependency.digest_path}?body=1"></script>\n}
+          scripts << %{<script src="#{prefix}/assets/js/#{dependency.digest_path}?body=1"></script>\n}
         }
 
         scripts << %{<script>#{opal_boot_code file}</script>}
